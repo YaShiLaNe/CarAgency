@@ -1,0 +1,40 @@
+import { _decorator, Component, Node, Texture2D, RenderTexture, CCString, MeshRenderer, gfx } from 'cc';
+import { RTMgr } from './RTMgr';
+import { PostEFXMgr } from './PostEFXMgr';
+const { ccclass, property } = _decorator;
+
+@ccclass('RTAsSampler')
+export class RTAsSampler extends Component {
+    @property({ type: [CCString], tooltip: "e.g full_scene:mainTexture" })
+    samplerMap: string[] = [];
+
+    @property({ type: MeshRenderer, tooltip: "model for post process." })
+    model: MeshRenderer = null!;
+    
+    applyParameters() {
+        let samplerInfo = new gfx.SamplerInfo();
+        samplerInfo.addressU = gfx.Address.CLAMP;
+        samplerInfo.addressV = gfx.Address.CLAMP;
+        samplerInfo.addressW = gfx.Address.CLAMP;
+        samplerInfo.minFilter = gfx.Filter.LINEAR;
+        samplerInfo.magFilter = gfx.Filter.LINEAR;
+        samplerInfo.mipFilter = gfx.Filter.NONE;
+
+        this.model.node.active = true;
+        for(let i = 0; i < this.samplerMap.length; ++i){
+            let arr = this.samplerMap[i].split(':');
+            let rtName = arr[0];
+            let samplerName = arr[1];
+            
+            if(rtName == 'prev_rt'){
+                rtName = PostEFXMgr.inst.getPrevRT(this.node);
+            }
+            let rt:RenderTexture = RTMgr.inst.getRenderTexture(rtName);
+            if(this.model.sharedMaterial && rt){        
+                rt.setFilters(Texture2D.Filter.LINEAR,Texture2D.Filter.LINEAR);
+                rt.setWrapMode(Texture2D.WrapMode.MIRRORED_REPEAT,Texture2D.WrapMode.MIRRORED_REPEAT);
+                this.model.sharedMaterial.setProperty(samplerName, rt); 
+            }
+        }
+    }
+}
